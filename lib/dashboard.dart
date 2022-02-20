@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'modelos/areas.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({Key key}) : super(key: key);
@@ -11,113 +13,108 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'App SENA',
+          style: TextStyle(
+            fontSize: 35.0,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
       backgroundColor: Colors.white,
       body: Stack(
-        children: [dashBg, content],
+        children: [
+          this.dashBg(),
+          this.content(),
+        ],
       ),
     );
   }
 
-  get dashBg => Column(
-        children: [
-          Expanded(
-            child: Container(
-              color: Colors.deepOrange,
-            ),
-            flex: 2,
+  Widget dashBg() {
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            color: Colors.deepOrange,
           ),
-          Expanded(
-            child: Container(
-              color: Colors.transparent,
-            ),
-            flex: 5,
+          flex: 1,
+        ),
+        Expanded(
+          child: Container(
+            color: Colors.transparent,
+          ),
+          flex: 5,
+        ),
+      ],
+    );
+  }
+
+  Widget content() {
+    return Expanded(
+      child: GridView.count(
+        crossAxisCount: 2,
+        padding: EdgeInsets.all(3.0),
+        children: <Widget>[
+          FutureBuilder(
+            future: getAreas(),
+            builder: (BuildContext context, AsyncSnapshot<List<Areas>> snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                List<Areas> lasareas = snapshot.data;
+                return grid(lasareas);
+              }
+              return Center(child: CircularProgressIndicator());
+            }
           ),
         ],
-      );
+      ),
+    );
+  }
 
-  get content => Container(
-        child: Column(
-          children: <Widget>[header, grid],
-        ),
-      );
-
-  get header => ListTile(
-        contentPadding: EdgeInsets.only(left: 20, right: 20, top: 22),
-        title: Text(
-          'App SENA',
-          style: TextStyle(
-              color: Colors.white, fontSize: 28.0, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          '8 Areas',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20.0,
+  ListView grid(List<Areas> lasareas) {
+    return ListView.builder(
+      itemCount: lasareas.length,
+      itemBuilder: (BuildContext context, int index) {
+        Areas areas = lasareas[index];
+        return Card(
+          elevation: 5,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
           ),
-        ),
-        trailing: CircleAvatar(),
-      );
-
-  get grid => Expanded(
-        child: Container(
-          padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
-          child: GridView.count(
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            crossAxisCount: 2,
-            childAspectRatio: .90,
-            children: List.generate(8, (_) {
-              return Card(
-                elevation: 5,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      logoSistemas,
-                    ],
+          child: Center(
+            child: InkWell(
+              onTap: () {},
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                verticalDirection: VerticalDirection.down,
+                children: <Widget>[
+                  Image.network(
+                    areas.urlAreas,
+                    width: 130.0,
                   ),
-                ),
-              );
-            }),
+                  Text(
+                    areas.titleAreas,
+                    style: TextStyle(
+                      fontSize: 20.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      );
+        );
+      },
+    );
+  }
 
-  get logoSistemas => Container(
-    child: Column(
-      children: [
-        Image.asset(
-          'assets/img/sistemas.png',
-          width: 100.0,
-        ),
-        Text(
-          'Sistemas',
-          style: TextStyle(
-            fontSize: 20.0,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  //sin usar todavia
-  get logoConfeccion => Container(
-    child: Column(
-      children: [
-        Image.asset(
-          'assets/img/confecciones.png',
-          width: 100.0,
-        ),
-        Text(
-          'Confeccion',
-          style: TextStyle(
-            fontSize: 20.0,
-          ),
-        ),
-      ],
-    ),
-  );
+  Future<List<Areas>> getAreas() async {
+    final url = Uri.parse(
+        'https://raw.githubusercontent.com/ShechyTorres/areas_senaAPI/main/areasSENA.json');
+    final respuesta = await http.get(url);
+    if (respuesta.statusCode == 200) {
+      return areasFromJson(respuesta.body);
+    } else
+      return null;
+  }
 }
